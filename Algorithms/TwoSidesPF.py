@@ -71,6 +71,7 @@ class TwoSidesPF(BasePF):
                     min_path = self.paths_s[point] + self.paths_e[point][::-1]
             self.done = True
             self.path = min_path
+            self.current_weight = min_weight
             self.to_display = list(new_checking_s) + self.checking_now_e
             return
 
@@ -99,6 +100,7 @@ class TwoSidesPF(BasePF):
                     min_path = self.paths_s[point] + self.paths_e[point][::-1]
             self.done = True
             self.path = min_path
+            self.current_weight = min_weight
             self.to_display = self.checking_now_s + list(new_checking_e)
             return
 

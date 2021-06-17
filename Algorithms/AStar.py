@@ -60,6 +60,8 @@ class AStar(BasePF):
         if self.checked[self.end]:
             self.done = True
             self.path = self.paths[self.end]
+            self.current_weight = self.weights[self.end]
+
 
     def update_paths_for_point(self, new_points, point):
         # updating info
