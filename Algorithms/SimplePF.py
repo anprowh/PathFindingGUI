@@ -2,6 +2,7 @@
 
 from Algorithms.BasePF import BasePF
 from SearchEnvironment import SearchEnvironment
+from numba import jit
 
 
 class SimplePF(BasePF):
@@ -21,20 +22,16 @@ class SimplePF(BasePF):
         self.current_weight = 0  # used for sequential work of algorithm. For GUI to display step by step
 
     def reset(self):
-        start = self.environment.get_start()
+        super(SimplePF, self).reset()
+        self.start = self.environment.get_start()
         self.end = self.environment.get_end()
-        self.paths = {start: [start]}  # paths to all processed points
-        self.weights = {start: 0}  # weights of paths to all processed points
-        self.checking_now = [start]  # points that are about to be processed on the next step
-        self.current_weight = 0  # used for sequential work of algorithm. For GUI to display step by step
-        to_process = self.environment.get_coordinate_list()
-        self.checked = {x: False for x in to_process}
-        self.done = False
-        self.path = []
+        self.paths = {self.start: [self.start]}  # paths to all processed points
+        self.weights = {self.start: 0}  # weights of paths to all processed points
+        self.checking_now = [self.start]  # points that are about to be processed on the next step
 
     def next_step(self):
         # Algorithm's steps are based on weight of path to points that are being processed
-        min_weight = 10 ** 12
+        min_weight = 10 ** 9
         for el in self.checking_now:
             min_weight = min(self.weights[el]-self.current_weight,min_weight)
         self.current_weight += min_weight
@@ -52,6 +49,7 @@ class SimplePF(BasePF):
                 self.checked[point] = True
 
         self.checking_now = list(new_checking)
+        self.to_display = self.checking_now
 
         if self.checked[self.end]:
             self.done = True
@@ -61,6 +59,7 @@ class SimplePF(BasePF):
         # updating info
         for next_point, next_weight in new_points.items():
             self.weights.setdefault(next_point, 10 ** 9)
+            self.n_checks += 1
             if self.weights[next_point] > self.weights[point] + next_weight:
                 self.weights[next_point] = self.weights[point] + next_weight
                 self.paths[next_point] = self.paths[point] + [next_point]

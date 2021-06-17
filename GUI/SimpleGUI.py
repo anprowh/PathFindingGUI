@@ -1,6 +1,7 @@
 import pygame
 from Algorithms.BasePF import BasePF
 from SearchEnvironment import SearchEnvironment
+from os.path import exists
 
 
 class SimpleGUI:
@@ -25,6 +26,14 @@ class SimpleGUI:
         fill_value_surface, grid_surface, screen = self.initialize()
 
         def write(msg="1", size=self.cell_size, width_limit=self.cell_size, color=(0, 0, 0)):
+            """
+            Returns surface with text on it, sized to fit one cell
+            :param msg:
+            :param size:
+            :param width_limit:
+            :param color:
+            :return:
+            """
             font = pygame.font.SysFont("None", size)
             text = font.render(msg, True, color)
             text = text.convert_alpha()
@@ -36,40 +45,58 @@ class SimpleGUI:
 
         clock = pygame.time.Clock()
         working = False  # is algorithm processing data or user typing values
+        drawing = False  # True if mouse button is pressed
+        text_to_redraw = self.environment.get_coordinate_list()
         fill_value = 1  # value used to fill clicked cells with
         rect_array = []
-        fps_working = 4  # FPS when algorithm is working (not user filling grid)
-        fps_drawing = 30
+        text_surfaces = [[None] * self.environment.shape[1] for _ in range(self.environment.shape[0])]
+        fps_working_list = [2, 5, 10, 20, 30, 60, 120]
+        fps_working_idx = 2  # FPS when algorithm is working (not user filling grid)
+        fps_drawing = 60
         main_loop = True
         while main_loop:
-            milliseconds = clock.tick(fps_working if working else fps_drawing)
+            milliseconds = clock.tick(fps_working_list[fps_working_idx] if working else fps_drawing)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     main_loop = False  # pygame window closed by user
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    for i, cell in enumerate(rect_array):
-                        if cell.collidepoint(event.pos):
-                            self.environment.set_weight(i // self.environment.shape[1],
-                                                        i % self.environment.shape[1], fill_value)
+                    drawing = True
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    drawing = False
+                if event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN) and drawing:
+                    for i, cells in enumerate(rect_array):
+                        for j, cell in enumerate(cells):
+                            if cell.collidepoint(event.pos):
+                                self.environment.set_weight(i, j, fill_value)
+                                self.algorithm.reset()
+                                working = False
+                                text_to_redraw.append((i, j))
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        main_loop = False  # user pressed ESC
+                        main_loop = False  # user pressed ESC -> quit
+                    elif event.key == pygame.K_RIGHT:
+                        fps_working_idx = min(fps_working_idx + 1, len(fps_working_list)-1)
+                    elif event.key == pygame.K_LEFT:
+                        fps_working_idx = max(fps_working_idx - 1, 0)
+                    elif event.key == pygame.K_m:
+                        fps_working_idx = len(fps_working_list)-1
                     elif event.key == pygame.K_SPACE:
-                        working = not working
+                        working = not working  # pausing and resuming
                     elif event.key == pygame.K_c:
                         fill_value = 0
                     elif event.key == pygame.K_r:
                         self.algorithm.reset()
-                    elif event.key == pygame.K_s:
+                    elif event.key == pygame.K_s:  # saving current grid of weights to ./saved_envs/{fill_value}.txt
                         data = self.environment.get_grid()
                         file = open(f'saved_envs/{fill_value}.txt', 'w')
-                        data = [' '.join([str(x) for x in ar]) for ar in data]
+                        data = [' '.join([str(x) for x in ar]) for ar in data]  # all the
                         data = '\n'.join(data)
                         data += f'\n{self.environment.shape[0]} {self.environment.shape[1]} ' \
                                 f'{self.environment.start[0]} {self.environment.start[1]} ' \
                                 f'{self.environment.end[0]} {self.environment.end[1]}'
                         file.write(data)
-                    elif event.key == pygame.K_l:
+                    # load environment from ./saved_envs/{fill_value}.txt
+                    elif event.key == pygame.K_l and exists(f'saved_envs/{fill_value}.txt'):
                         file = open(f'saved_envs/{fill_value}.txt', 'r')
                         data = file.read().split('\n')
                         grid_data = [[int(x) for x in ar.split()] for ar in data[:-1]]
@@ -77,11 +104,12 @@ class SimpleGUI:
                         new_environment = SearchEnvironment(shape0, shape1, startx, starty, endx, endy)
                         for i in range(shape0):
                             for j in range(shape1):
-                                new_environment.set_weight(i,j,grid_data[i][j])
+                                new_environment.set_weight(i, j, grid_data[i][j])
                         self.environment = new_environment
                         self.algorithm.environment = new_environment
                         self.algorithm.reset()
-                    elif event.unicode.isdigit():
+                        text_to_redraw = self.environment.get_coordinate_list()
+                    elif event.unicode.isdigit():  # setting fill_value to fill grid with weights
                         fill_value *= 10
                         fill_value += int(event.unicode)
                     elif event.key == pygame.K_BACKSPACE:
@@ -89,8 +117,12 @@ class SimpleGUI:
 
             if not self.algorithm.done and working:
                 self.algorithm.next_step()
+
+            if self.algorithm.done:
+                working = False
+
             grid = [[' '] * self.environment.shape[1] for i in range(self.environment.shape[0])]
-            for x, y in self.algorithm.checking_now:
+            for x, y in self.algorithm.to_display:
                 grid[x][y] = '*'
             for x, y in self.algorithm.path:
                 grid[x][y] = 'o'
@@ -99,32 +131,35 @@ class SimpleGUI:
             grid[start[0]][start[1]] = 'S'
             grid[end[0]][end[1]] = 'E'
 
-            text_surfaces = []
-            rect_array = []
+            rect_array = [[] for _ in range(len(grid))]
 
             for i, ar in enumerate(grid):
                 for j, cell_type in enumerate(ar):
                     # square with color depending on type of cell
-                    rect_array.append(pygame.Rect(i * self.cell_size, j * self.cell_size,
-                                                  self.cell_size, self.cell_size))
+                    rect_array[i].append(pygame.Rect(i * self.cell_size, j * self.cell_size,
+                                                     self.cell_size, self.cell_size))
                     pygame.draw.rect(grid_surface, self.color(cell_type, self.environment.get_weight(i, j)),
-                                     rect_array[-1])
+                                     rect_array[i][-1])
 
                     # second element represents center of a text field
-                    weight = self.environment.get_weight(i, j)
-                    text_surface = (write(str(weight), color=(0, 0, 0) if weight < 15 else (255, 255, 255)),
-                                    (int((i + 0.5) * self.cell_size), int((j + 0.5) * self.cell_size)))
-                    text_surfaces.append(text_surface)
+                    if (i, j) in text_to_redraw:
+                        weight = self.environment.get_weight(i, j)
+                        text_surface_and_pos = (write(str(weight), color=(0, 0, 0) if weight < 15 else (255, 255, 255)),
+                                                (int((i + 0.5) * self.cell_size), int((j + 0.5) * self.cell_size)))
+                        text_surfaces[i][j] = text_surface_and_pos
+
+            text_to_redraw = []
 
             # drawing grid and text
             screen.blit(grid_surface, (0, 0))
-            for surface, position in text_surfaces:
-                text_rect = surface.get_rect(center=position)
-                screen.blit(surface, text_rect)
+            for i in range(len(text_surfaces)):
+                for surface, position in text_surfaces[i]:
+                    text_rect = surface.get_rect(center=position)
+                    screen.blit(surface, text_rect)
             screen.blit(fill_value_surface, (0, self.height))
             screen.blit(write(str(fill_value), 40, self.width, False), (0, self.height + 5))
-            pygame.display.set_caption(
-                "Frame rate %.2f frames per second" % (clock.get_fps()))
+            pygame.display.set_caption(f"{type(self.algorithm).__name__} algorithm. {self.algorithm.n_checks} checks. "
+                                       f"{self.algorithm.current_weight} weight. {int(clock.get_fps())} FPS")
             pygame.display.flip()
 
     def initialize(self):

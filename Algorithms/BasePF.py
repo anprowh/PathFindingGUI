@@ -14,22 +14,27 @@ class BasePF:
     environment = None
 
     def __init__(self, environment: SearchEnvironment):
-        self.checking_now = [environment.start]
+        self.to_display = [environment.start]
         self.environment = environment
         self.start = environment.start
         self.end = environment.end
+        self.path = []
         to_process = self.environment.get_coordinate_list()
         self.checked = {x: False for x in to_process}
+        self.n_checks = 0
+        self.current_weight = 0
 
     def next_step(self):
         """ performs next step of graph processing to find the best path. Updates checked and done vars """
 
     def reset(self):
-        self.checking_now = [self.environment.start]
+        self.to_display = [self.environment.start]
         to_process = self.environment.get_coordinate_list()
         self.checked = {x: False for x in to_process}
         self.path = [self.environment.start]
         self.done = False
+        self.n_checks = 0
+        self.current_weight = 0
 
     def get_checked(self):
         return self.checked.copy()
