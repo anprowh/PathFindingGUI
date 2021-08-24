@@ -1,0 +1,61 @@
+.site-header a {
+  text-decoration: none;
+  color: snow;
+}
+
+.site-header { 
+  border-bottom: 1px solid #ccc;
+  padding: .5em 1em;
+  display: flex;
+  justify-content: space-between;
+  background-color: #282c34;
+}
+
+.site-identity img {
+  display: inline-block;
+  width: 50px;
+  margin: .6em 0;
+  margin-right: 1em;
+}
+
+.site-identity h1 {
+  font-size: 1.5em;
+  margin: .6em 0;
+  display: inline-block;
+}
+
+
+.site-navigation ul, 
+.site-navigation li {
+  margin: 0; 
+  padding: 0;
+}
+
+.site-navigation li {
+  display: inline-block;
+  margin: 1.4em 1em 1em 1em;
+}
+
+.grid {
+  border-collapse: collapse;
+  margin: 10px;
+}
+
+.grid tr {
+  min-height: 0;
+  margin:0;
+}
+
+.grid td {
+  
+  /*
+  width, height and line height are defined in Grid.js
+  */
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid black;
+}
+
+.keyboard-input {
+  visibility:visible;
+}
