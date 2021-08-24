@@ -2,7 +2,6 @@
 
 from Algorithms.BasePF import BasePF
 from SearchEnvironment import SearchEnvironment
-from numba import jit
 
 
 class SimplePF(BasePF):

@@ -1,3 +1,4 @@
+from os.path import exists
 """
 Environment where PF algorithm does its job.
 2D table of weights (difficulty) for cell entrance for agent
@@ -64,3 +65,28 @@ class SearchEnvironment:
     # connections graph for all coordinates
     def get_full_graph(self, with_corners=False):
         return self.get_part_graph(self.get_coordinate_list(), with_corners)
+
+    @staticmethod
+    def load(env_id):
+        if not exists(f'saved_envs/{env_id}.txt'):
+            return self
+        file = open(f'saved_envs/{env_id}.txt', 'r')
+        data = file.read().split('\n')
+        grid_data = [[int(x) for x in ar.split()] for ar in data[:-1]]
+        shape0, shape1, startx, starty, endx, endy = [int(x) for x in data[-1].split()]
+        new_environment = SearchEnvironment(shape0, shape1, startx, starty, endx, endy)
+        for i in range(shape0):
+            for j in range(shape1):
+                new_environment.set_weight(i, j, grid_data[i][j])
+        return new_environment
+
+    def save(self, file_id):
+        data = self.get_grid()
+        file = open(f'saved_envs/{file_id}.txt', 'w')
+        data = [' '.join([str(x) for x in ar]) for ar in data]  # all the
+        data = '\n'.join(data)
+        data += f'\n{self.shape[0]} {self.shape[1]} ' \
+                f'{self.start[0]} {self.start[1]} ' \
+                f'{self.end[0]} {self.end[1]}'
+        file.write(data)
+

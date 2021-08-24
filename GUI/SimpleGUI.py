@@ -87,26 +87,11 @@ class SimpleGUI:
                     elif event.key == pygame.K_r:
                         self.algorithm.reset()
                     elif event.key == pygame.K_s:  # saving current grid of weights to ./saved_envs/{fill_value}.txt
-                        data = self.environment.get_grid()
-                        file = open(f'saved_envs/{fill_value}.txt', 'w')
-                        data = [' '.join([str(x) for x in ar]) for ar in data]  # all the
-                        data = '\n'.join(data)
-                        data += f'\n{self.environment.shape[0]} {self.environment.shape[1]} ' \
-                                f'{self.environment.start[0]} {self.environment.start[1]} ' \
-                                f'{self.environment.end[0]} {self.environment.end[1]}'
-                        file.write(data)
+                        self.environment.save(fill_value)
                     # load environment from ./saved_envs/{fill_value}.txt
-                    elif event.key == pygame.K_l and exists(f'saved_envs/{fill_value}.txt'):
-                        file = open(f'saved_envs/{fill_value}.txt', 'r')
-                        data = file.read().split('\n')
-                        grid_data = [[int(x) for x in ar.split()] for ar in data[:-1]]
-                        shape0, shape1, startx, starty, endx, endy = [int(x) for x in data[-1].split()]
-                        new_environment = SearchEnvironment(shape0, shape1, startx, starty, endx, endy)
-                        for i in range(shape0):
-                            for j in range(shape1):
-                                new_environment.set_weight(i, j, grid_data[i][j])
-                        self.environment = new_environment
-                        self.algorithm.environment = new_environment
+                    elif event.key == pygame.K_l:
+                        self.environment = self.environment.load(fill_value)
+                        self.algorithm.environment = self.environment
                         self.algorithm.reset()
                         text_to_redraw = self.environment.get_coordinate_list()
                     elif event.unicode.isdigit():  # setting fill_value to fill grid with weights
